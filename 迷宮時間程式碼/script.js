@@ -2224,5 +2224,3 @@ class MazeGame {
 
 // 初始化遊戲
 const game = new MazeGame('gameCanvas');
-// 初始化遊戲
-const game = new MazeGame('gameCanvas');
