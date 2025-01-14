@@ -1,6 +1,8 @@
 body {
     margin: 0;
+    padding: 0;
     overflow: hidden;
+    touch-action: none;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -19,6 +21,7 @@ body {
 canvas {
     background: #f0f0f0;
     display: block;
+    touch-action: none;
     width: 100%;
     border: 2px solid #34495e;
     border-radius: 8px;
