@@ -1327,112 +1327,130 @@ class MazeGame {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // 處理觸控開始
-    handleTouchStart(touch) {
-        const rect = this.canvas.getBoundingClientRect();
-        const canvasScaleX = this.canvas.width / rect.width;
-        const canvasScaleY = this.canvas.height / rect.height;
-        
-        const touchX = (touch.clientX - rect.left) * canvasScaleX;
-        const touchY = (touch.clientY - rect.top) * canvasScaleY;
+    // 修改處理觸控開始的方法
+handleTouchStart(touch) {
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasScaleX = this.canvas.width / rect.width;
+    const canvasScaleY = this.canvas.height / rect.height;
+    
+    const touchX = (touch.clientX - rect.left) * canvasScaleX;
+    const touchY = (touch.clientY - rect.top) * canvasScaleY;
 
-        // 檢查是否點擊到目標
-        const dist = Math.sqrt(
-            (touchX - this.target.x) ** 2 + 
-            (touchY - this.target.y) ** 2
-        );
+    // 檢查是否點擊到目標
+    const dist = Math.sqrt(
+        (touchX - this.target.x) ** 2 + 
+        (touchY - this.target.y) ** 2
+    );
 
-        if (dist < (this.target.radius * this.zoomFactor * 2)) {
-            this.target.following = true;
-            this.target.color = 'blue';
-            this.target.trail = [{ x: this.target.x, y: this.target.y }];
-        }
+    if (dist < (this.target.radius * this.zoomFactor * 2)) {
+        this.target.following = true;
+        this.target.color = 'blue';
+        this.target.trail = [{ x: this.target.x, y: this.target.y }];
     }
+}
 
-    // 處理觸控移動
-    handleTouchMove(touch) {
-        const rect = this.canvas.getBoundingClientRect();
-        const canvasScaleX = this.canvas.width / rect.width;
-        const canvasScaleY = this.canvas.height / rect.height;
+    // 修改處理觸控移動的方法
+handleTouchMove(touch) {
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasScaleX = this.canvas.width / rect.width;
+    const canvasScaleY = this.canvas.height / rect.height;
+    
+    const touchX = (touch.clientX - rect.left) * canvasScaleX;
+    const touchY = (touch.clientY - rect.top) * canvasScaleY;
+    
+    if (this.target.following) {
+        // 更新目標位置
+        this.target.x = touchX;
+        this.target.y = touchY;
         
-        const touchX = (touch.clientX - rect.left) * canvasScaleX;
-        const touchY = (touch.clientY - rect.top) * canvasScaleY;
+        // 添加軌跡點
+        this.target.trail.push({
+            x: this.target.x,
+            y: this.target.y
+        });
+        
+        // 限制軌跡長度
+        if (this.target.trail.length > 1000) {
+            this.target.trail.shift();
+        }
+    } else {
+        // 計算移動距離
         const prevX = (this.touchStartX - rect.left) * canvasScaleX;
         const prevY = (this.touchStartY - rect.top) * canvasScaleY;
-
-        if (this.target.following) {
-            // 更新目標位置
-            this.target.x = touchX;
-            this.target.y = touchY;
-            
-            // 添加軌跡點
-            this.target.trail.push({
-                x: this.target.x,
-                y: this.target.y
-            });
-            
-            // 限制軌跡長度
-            if (this.target.trail.length > 1000) {
-                this.target.trail.shift();
-            }
-        } else {
-            // 處理地圖拖曳
-            const dx = touchX - prevX;
-            const dy = touchY - prevY;
-            
-            this.offsetX += dx;
-            this.offsetY += dy;
-            
-            // 更新終點位置
-            this.endpoint.x += dx;
-            this.endpoint.y += dy;
-        }
-
-        this.touchStartX = touch.clientX;
-        this.touchStartY = touch.clientY;
-    }
-
-    // 處理雙指縮放
-    handlePinchZoom(touches) {
-        const currentDistance = this.getTouchDistance(touches);
-        const scale = currentDistance / this.lastTouchDistance;
+        const dx = touchX - prevX;
+        const dy = touchY - prevY;
         
-        // 計算縮放中心點
-        const centerX = (touches[0].clientX + touches[1].clientX) / 2;
-        const centerY = (touches[0].clientY + touches[1].clientY) / 2;
+        // 更新偏移
+        this.offsetX += dx;
+        this.offsetY += dy;
         
-        // 應用縮放
-        const newZoom = this.zoomFactor * scale;
-        if (newZoom >= config.minZoom && newZoom <= config.maxZoom) {
-            this.zoomFactor = newZoom;
-            
-            // 更新位置以保持縮放中心點
-            const rect = this.canvas.getBoundingClientRect();
-            const canvasScaleX = this.canvas.width / rect.width;
-            const canvasScaleY = this.canvas.height / rect.height;
-            
-            const zoomCenterX = (centerX - rect.left) * canvasScaleX;
-            const zoomCenterY = (centerY - rect.top) * canvasScaleY;
-            
-            this.offsetX = zoomCenterX - (zoomCenterX - this.offsetX) * scale;
-            this.offsetY = zoomCenterY - (zoomCenterY - this.offsetY) * scale;
-            
-            // 更新終點位置
-            this.updateEndpointPosition();
-        }
-        
-        this.lastTouchDistance = currentDistance;
-
         // 更新目標位置
-        this.target.x = this.target.x * scale;
-        this.target.y = this.target.y * scale;
+        this.target.x += dx;
+        this.target.y += dy;
         
-        // 更新軌跡位置
+        // 更新目標軌跡
         this.target.trail = this.target.trail.map(point => ({
-            x: point.x * scale,
-            y: point.y * scale
+            x: point.x + dx,
+            y: point.y + dy
         }));
+        
+        // 更新終點位置
+        this.endpoint.x += dx;
+        this.endpoint.y += dy;
     }
+
+    // 更新觸控起始位置
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+}
+
+    // 修改處理雙指縮放的方法
+handlePinchZoom(touches) {
+    const currentDistance = this.getTouchDistance(touches);
+    const scale = currentDistance / this.lastTouchDistance;
+    
+    // 計算縮放中心點
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasScaleX = this.canvas.width / rect.width;
+    const canvasScaleY = this.canvas.height / rect.height;
+    
+    const touch1X = (touches[0].clientX - rect.left) * canvasScaleX;
+    const touch1Y = (touches[0].clientY - rect.top) * canvasScaleY;
+    const touch2X = (touches[1].clientX - rect.left) * canvasScaleX;
+    const touch2Y = (touches[1].clientY - rect.top) * canvasScaleY;
+    
+    const centerX = (touch1X + touch2X) / 2;
+    const centerY = (touch1Y + touch2Y) / 2;
+    
+    // 檢查新的縮放是否在允許範圍內
+    const newZoom = this.zoomFactor * scale;
+    if (newZoom >= config.minZoom && newZoom <= config.maxZoom) {
+        // 保存當前目標相對於縮放中心的位置
+        const targetRelX = this.target.x - centerX;
+        const targetRelY = this.target.y - centerY;
+        
+        this.zoomFactor = newZoom;
+        
+        // 更新偏移以保持縮放中心點
+        this.offsetX = centerX - (centerX - this.offsetX) * scale;
+        this.offsetY = centerY - (centerY - this.offsetY) * scale;
+        
+        // 更新目標位置
+        this.target.x = centerX + targetRelX * scale;
+        this.target.y = centerY + targetRelY * scale;
+        
+        // 更新目標軌跡
+        this.target.trail = this.target.trail.map(point => ({
+            x: centerX + (point.x - centerX) * scale,
+            y: centerY + (point.y - centerY) * scale
+        }));
+        
+        // 更新終點位置
+        this.updateEndpointPosition();
+    }
+    
+    this.lastTouchDistance = currentDistance;
+}
 
     // 處理觸控結束
     handleTouchEnd(e) {
@@ -1524,23 +1542,81 @@ class MazeGame {
         console.log("碰撞地圖生成完成！");
     }
 
-    // 創建描述面板
-    createDescriptionPanel() {
-        this.descriptionPanel = document.createElement('div');
-        this.descriptionPanel.id = 'descriptionPanel';
-        this.descriptionPanel.style.cssText = `
-            position: fixed;
-            right: 20px;
-            top: 20px;
-            width: 300px;
-            padding: 20px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        `;
-        document.body.appendChild(this.descriptionPanel);
-    }
+    // 修改建立描述面板的方法
+createDescriptionPanel() {
+    this.descriptionPanel = document.createElement('div');
+    this.descriptionPanel.id = 'descriptionPanel';
+    this.descriptionPanel.style.cssText = `
+        position: fixed;
+        right: 20px;
+        top: 20px;
+        width: 300px;
+        max-height: 80vh;
+        padding: 20px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        visibility: hidden; /* 使用 visibility 代替 display */
+        opacity: 0;
+        transition: visibility 0s, opacity 0.3s linear; /* 添加過渡效果 */
+    `;
+
+    // 創建關閉按鈕
+    const closeButton = document.createElement('div');
+    closeButton.style.cssText = `
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        line-height: 20px;
+        color: #666;
+    `;
+    closeButton.innerHTML = '×';
+    closeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.hideDescription();
+    });
+
+    // 創建內容容器
+    this.descriptionContent = document.createElement('div');
+    this.descriptionContent.style.cssText = `
+        padding-right: 20px;
+    `;
+
+    this.descriptionPanel.appendChild(closeButton);
+    this.descriptionPanel.appendChild(this.descriptionContent);
+    document.body.appendChild(this.descriptionPanel);
+}
+
+// 修改顯示描述文字的方法
+showDescription(title, description) {
+    // 更新內容
+    this.descriptionContent.innerHTML = `
+        <h3 style="margin: 0 0 10px 0;">${title}</h3>
+        <p style="margin: 0;">${description}</p>
+    `;
+    
+    // 顯示面板
+    this.descriptionPanel.style.visibility = 'visible';
+    this.descriptionPanel.style.opacity = '1';
+}
+
+// 修改隱藏描述面板的方法
+hideDescription() {
+    this.descriptionPanel.style.opacity = '0';
+    setTimeout(() => {
+        this.descriptionPanel.style.visibility = 'hidden';
+    }, 300); // 等待淡出動畫完成
+}
 
     // 更新終點座標的方法
     updateEndpointPosition() {
@@ -1814,13 +1890,7 @@ class MazeGame {
         }
     }
 
-    // 顯示描述文字
-    showDescription(title, description) {
-        this.descriptionPanel.innerHTML = `
-            <h3 style="margin: 0 0 10px 0;">${title}</h3>
-            <p style="margin: 0;">${description}</p>
-        `;
-    }
+    
 
     // 更新縮放處理
     handleWheel(event) {
