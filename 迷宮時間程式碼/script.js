@@ -1239,9 +1239,37 @@ class MazeGame {
     }
 
     bindTouchEvents() {
+        
         // 觸控開始
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            // 處理點擊建築物
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasScaleX = this.canvas.width / rect.width;
+            const canvasScaleY = this.canvas.height / rect.height;
+            
+            const touchX = (touch.clientX - rect.left) * canvasScaleX;
+            const touchY = (touch.clientY - rect.top) * canvasScaleY;
+
+            // 檢查所有位置組
+            [this.locations1, this.locations2, this.locations3, this.locations4, this.locations5].forEach(locations => {
+                locations.forEach(loc => {
+                    const scaledX = loc.x * this.zoomFactor + this.offsetX;
+                    const scaledY = loc.y * this.zoomFactor + this.offsetY;
+                    const scaledWidth = loc.width * this.zoomFactor;
+                    const scaledHeight = loc.height * this.zoomFactor;
+
+                    if (
+                        touchX >= scaledX &&
+                        touchX <= scaledX + scaledWidth &&
+                        touchY >= scaledY &&
+                        touchY <= scaledY + scaledHeight
+                    ) {
+                        this.showDescription(loc.text, loc.description);
+                    }
+                });
+            });
             this.isTouching = true;
             
             if (e.touches.length === 2) {
@@ -1394,6 +1422,16 @@ class MazeGame {
         }
         
         this.lastTouchDistance = currentDistance;
+
+        // 更新目標位置
+        this.target.x = this.target.x * scale;
+        this.target.y = this.target.y * scale;
+        
+        // 更新軌跡位置
+        this.target.trail = this.target.trail.map(point => ({
+            x: point.x * scale,
+            y: point.y * scale
+        }));
     }
 
     // 處理觸控結束
