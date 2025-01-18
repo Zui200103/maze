@@ -1335,6 +1335,8 @@ handleTouchStart(touch) {
     
     const touchX = (touch.clientX - rect.left) * canvasScaleX;
     const touchY = (touch.clientY - rect.top) * canvasScaleY;
+    this.lastValidTouchX = touchX;
+    this.lastValidTouchY = touchY;
 
     // 檢查是否點擊到目標
     const dist = Math.sqrt(
@@ -1349,7 +1351,6 @@ handleTouchStart(touch) {
     }
 }
 
-    // 修改處理觸控移動的方法
 handleTouchMove(touch) {
     const rect = this.canvas.getBoundingClientRect();
     const canvasScaleX = this.canvas.width / rect.width;
@@ -1358,7 +1359,41 @@ handleTouchMove(touch) {
     const touchX = (touch.clientX - rect.left) * canvasScaleX;
     const touchY = (touch.clientY - rect.top) * canvasScaleY;
     
+    // 初始化或更新上一個有效的觸控位置
+    if (this.lastValidTouchX === undefined) {
+        this.lastValidTouchX = touchX;
+        this.lastValidTouchY = touchY;
+    }
+    
     if (this.target.following) {
+        // 檢查碰撞
+        if (this.isLineCollidingWithObstacle(
+            this.lastValidTouchX,
+            this.lastValidTouchY,
+            touchX,
+            touchY
+        )) {
+            console.log("觸控模式: 檢測到碰撞!");
+            
+            if (this.target.trail.length >= 5) {
+                const trailPoints = [];
+                for (let i = 0; i < 5; i++) {
+                    trailPoints.push(this.target.trail.pop()); // 移除並保存最後五個點
+                }
+                
+                const lastTrailPoint = trailPoints[trailPoints.length - 1];
+                this.target.x = lastTrailPoint.x;
+                this.target.y = lastTrailPoint.y;
+                
+                console.log("觸控模式: 退回到最近的五個點:", trailPoints);
+            }
+            
+            // 停止跟隨並更改目標顏色
+            this.target.following = false;
+            this.target.color = 'red';
+            return;
+        }
+
         // 更新目標位置
         this.target.x = touchX;
         this.target.y = touchY;
@@ -1373,6 +1408,10 @@ handleTouchMove(touch) {
         if (this.target.trail.length > 1000) {
             this.target.trail.shift();
         }
+        
+        // 更新上一個有效的觸控位置
+        this.lastValidTouchX = touchX;
+        this.lastValidTouchY = touchY;
     } else {
         // 計算移動距離
         const prevX = (this.touchStartX - rect.left) * canvasScaleX;
