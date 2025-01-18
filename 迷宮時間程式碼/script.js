@@ -78,6 +78,8 @@ class MazeGame {
         this.coloredImage.src = './images/紫禁城平面圖上色.png';
         // 綁定觸控事件
         this.bindTouchEvents();
+        this.lastFollowingStopTime = 0; // 記錄最後一次停止跟隨的時間
+        this.followingCooldown = 1000; // 冷卻時間（毫秒）
         
         // 目標物件
         this.target = {
@@ -1345,7 +1347,9 @@ handleTouchStart(touch) {
         (touchY - this.target.y) ** 2
     );
 
-    if (dist < touchTargetRadius) {
+    const currentTime = Date.now();
+    if (dist < touchTargetRadius && 
+        currentTime - this.lastFollowingStopTime >= this.followingCooldown) {
         this.target.following = true;
         this.target.color = 'blue';
         this.target.trail = [{ x: this.target.x, y: this.target.y }];
@@ -1715,14 +1719,16 @@ hideDescription() {
             (currentMouseY - this.target.y) ** 2
         );
 
-        // 如果滑鼠碰到目標，自動開始跟隨
-        if (dist < (this.target.radius * this.zoomFactor * 2)) {
-            if (!this.target.following) {
-                this.target.following = true;
-                this.target.color = 'blue';
-                this.target.trail = [{ x: this.target.x, y: this.target.y }];
-            }
+            // 如果滑鼠碰到目標，檢查冷卻時間後再自動開始跟隨
+            if (dist < (this.target.radius * this.zoomFactor * 2)) {
+                const currentTime = Date.now();
+                if (!this.target.following && 
+                    currentTime - this.lastFollowingStopTime >= this.followingCooldown) {
+                        this.target.following = true;
+                        this.target.color = 'blue';
+                        this.target.trail = [{ x: this.target.x, y: this.target.y }];
         }
+    }
 
         // 初始化或更新上一個有效的滑鼠位置
         if (this.lastValidMouseX === null) {
@@ -1829,18 +1835,24 @@ hideDescription() {
         const canvasScaleX = this.canvas.width / rect.width;
         const canvasScaleY = this.canvas.height / rect.height;
         
-        // 轉換滑鼠座標到畫布座標系統
         const adjustedMouseX = (event.clientX - rect.left) * canvasScaleX;
         const adjustedMouseY = (event.clientY - rect.top) * canvasScaleY;
-
+    
         // 檢查是否點擊了目標
         if (this.isMouseOnTarget(event.clientX, event.clientY)) {
-            this.target.following = !this.target.following;
+            const currentTime = Date.now();
             if (this.target.following) {
-                this.target.trail = [{ x: this.target.x, y: this.target.y }];
-                this.target.color = 'blue';
-            } else {
+                // 如果正在跟隨，則停止並記錄時間
+                this.target.following = false;
                 this.target.color = 'red';
+                this.lastFollowingStopTime = currentTime;
+            } else {
+                // 檢查是否已經過了冷卻時間
+                if (currentTime - this.lastFollowingStopTime >= this.followingCooldown) {
+                    this.target.following = true;
+                    this.target.trail = [{ x: this.target.x, y: this.target.y }];
+                    this.target.color = 'blue';
+                }
             }
             return;
         }
