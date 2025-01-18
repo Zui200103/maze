@@ -1338,13 +1338,14 @@ handleTouchStart(touch) {
     this.lastValidTouchX = touchX;
     this.lastValidTouchY = touchY;
 
-    // 檢查是否點擊到目標
+    // 檢查是否點擊到目標 - 在觸控模式下使用更大的判定範圍
+    const touchTargetRadius = this.target.radius * this.zoomFactor * 4; // 將判定範圍擴大為原來的4倍
     const dist = Math.sqrt(
         (touchX - this.target.x) ** 2 + 
         (touchY - this.target.y) ** 2
     );
 
-    if (dist < (this.target.radius * this.zoomFactor * 2)) {
+    if (dist < touchTargetRadius) {
         this.target.following = true;
         this.target.color = 'blue';
         this.target.trail = [{ x: this.target.x, y: this.target.y }];
